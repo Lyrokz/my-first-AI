@@ -1,96 +1,68 @@
 'use strict'
 
-const getCurrentWeather = require('./lib/getCurrentWeather')
-
-const firstOfEntityRole = function(message, entity, role) {
-  role = role || 'generic';
-
-  const slots = message.slots
-  const entityValues = message.slots[entity]
-  const valsForRole = entityValues ? entityValues.values_by_role[role] : null
-
-  return valsForRole ? valsForRole[0] : null
-}
-
 exports.handle = function handle(client) {
-  const collectCity = client.createStep({
+  const sayHello = client.createStep({
     satisfied() {
-      return Boolean(client.getConversationState().weatherCity)
-    },
-
-    extractInfo() {
-     const city = firstOfEntityRole(client.getMessagePart(), 'city')
-      if (city) {
-        client.updateConversationState({
-          weatherCity: city,
-        })
-        console.log('User wants the weather in:', city.value)
-      }
+      return Boolean(client.getConversationState().helloSent)
     },
 
     prompt() {
-      client.addResponse('prompt/weather_city')
+      client.addResponse('welcome')
+      client.addResponse('provide/documentation', {
+        documentation_link: 'http://docs.init.ai',
+      })
+      client.addResponse('provide/instructions')
+      client.updateConversationState({
+        helloSent: true
+      })
       client.done()
-    },
+    }
   })
 
-  const provideWeather = client.createStep({
+  const untrained = client.createStep({
     satisfied() {
       return false
     },
 
-    prompt(callback) {
-      const environment = client.getCurrentApplicationEnvironment()
-      getCurrentWeather(environment.weatherAPIKey, client.getConversationState().weatherCity.value, resultBody => {
-        if (!resultBody || resultBody.cod !== 200) {
-          console.log('Error getting weather.')
-          callback()
-          return
-        }
-
-        const weatherDescription = (
-          resultBody.weather.length > 0 ?
-          resultBody.weather[0].description :
-          null
-        )
-
-        const weatherData = {
-          temperature: Math.round(resultBody.main.temp),
-          condition: weatherDescription,
-          city: resultBody.name,
-        }
-
-        console.log('sending real weather:', weatherData)
-        client.addResponse('provide_weather/current', weatherData)
-        client.done()
-
-        callback()
-      })
-    },
+    prompt() {
+      client.addResponse('apology/untrained')
+     client.done()
+    }
   })
-const handleGreeting = client.createStep({
-  satisfied() {
-    return false
-  },
 
-  prompt() {
-    client.addResponse('greeting')
-    client.done()
-  }
-})
+  const handleGreeting = client.createStep({
+    satisfied() {
+      return false
+    },
+
+    prompt() {
+      client.addTextResponse('Hello world, I mean human')
+      client.done()
+    }
+  })
+
+  const handleGoodbye = client.createStep({
+    satisfied() {
+      return false
+    },
+
+    prompt() {
+      client.addTextResponse('See you later!')
+      client.done()
+    }
+  })
+
   client.runFlow({
     classifications: {
-      // Add a greeting handler with a reference to the greeting stream
+      goodbye: 'goodbye',
       greeting: 'greeting'
     },
     streams: {
-      main: 'getWeather',
-      getWeather: [collectCity, provideWeather],
-          // Add a Stream for greetings and assign it a Step
-    greeting: handleGreeting,
-    main: 'onboarding',
-    onboarding: [sayHello],
-    end: [untrained]
+      goodbye: handleGoodbye,
+      greeting: handleGreeting,
+      main: 'onboarding',
+      onboarding: [sayHello],
+      end: [untrained]
     }
   })
 }
