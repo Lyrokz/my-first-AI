@@ -1,4 +1,5 @@
 'use strict'
+
 const getCurrentWeather = require('./lib/getCurrentWeather')
 
 const firstOfEntityRole = function(message, entity, role) {
@@ -10,13 +11,14 @@ const firstOfEntityRole = function(message, entity, role) {
 
   return valsForRole ? valsForRole[0] : null
 }
+
 exports.handle = function handle(client) {
   const sayHello = client.createStep({
     satisfied() {
       return Boolean(client.getConversationState().helloSent)
     },
 
-      prompt() {
+    prompt() {
       client.addResponse('app:response:name:welcome')
       client.addResponse('app:response:name:provide/documentation', {
         documentation_link: 'http://docs.init.ai',
@@ -34,12 +36,13 @@ exports.handle = function handle(client) {
       return false
     },
 
-      prompt() {
+    prompt() {
       client.addResponse('app:response:name:apology/untrained')
       client.done()
     }
   })
-   const collectCity = client.createStep({
+
+  const collectCity = client.createStep({
     satisfied() {
       return Boolean(client.getConversationState().weatherCity)
     },
@@ -92,28 +95,6 @@ exports.handle = function handle(client) {
         callback()
       })
     },
-  })
-  
-  const handleGreeting = client.createStep({
-    satisfied() {
-      return false
-    },
-
-    prompt() {
-      client.addTextResponse('Hello world, I mean human')
-      client.done()
-    }
-  })
-
-  const handleGoodbye = client.createStep({
-    satisfied() {
-      return false
-    },
-
-    prompt() {
-      client.addTextResponse('See you later!')
-      client.done()
-    }
   })
 
   client.runFlow({
